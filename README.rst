@@ -3,8 +3,7 @@
 elFinder Python Connector
 =========================
 
-gt
-it's fork from `<https://github.com/Studio-42/elfinder-python>`_
+It's fork from `<https://github.com/Studio-42/elfinder-python>`_
 
 TODO:
 -----

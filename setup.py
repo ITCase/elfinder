@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup
 
-version = '0.0.3'
+version = '0.0.4.dev1'
 
 here = os.path.dirname(os.path.realpath(__file__))
 

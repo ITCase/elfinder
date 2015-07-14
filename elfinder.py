@@ -49,7 +49,7 @@ class connector():
             'extract': {}
         },
         'disabled': [],
-        'debug': True
+        'debug': False
     }
 
     _commands = {

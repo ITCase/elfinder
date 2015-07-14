@@ -1354,7 +1354,7 @@ class connector():
     def __hash(self, path):
         """Hash of the path"""
         m = hashlib.md5()
-        m.update(path)
+        m.update(path.encode('utf-8'))
         return str(m.hexdigest())
 
     def __path2url(self, path):

@@ -25,6 +25,8 @@ setup(
     description='elFinder connector for python.',
     long_description=read('README.rst'),
     install_requires=read('requirements.txt'),
+    tests_require=read('requirements.txt') + read('requirements-test.txt'),
+    test_suite="nose.collector",
 
     classifiers=[
         'Development Status :: 5 - Production/Stable',

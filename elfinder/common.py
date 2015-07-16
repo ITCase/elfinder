@@ -72,35 +72,6 @@ class ElfinderException(Exception):
     pass
 
 
-class CachedAttribute(object):
-    '''
-    Computes attribute value and caches it in the instance.  From the Python
-    Cookbook (Denis Otkidach) This decorator allows you to create a property
-    which can be computed once and accessed many times. Sort of like
-    memoization.
-    '''
-    def __init__(self, method, name=None):
-        # record the unbound-method and the name
-        self.method = method
-        self.name = name or method.__name__
-        self.__doc__ = method.__doc__
-
-    def __get__(self, inst, cls):
-        # self: <__main__.cache object at 0xb781340c>
-        # inst: <__main__.Foo object at 0xb781348c>
-        # cls: <class '__main__.Foo'>
-        if inst is None:
-            # instance attribute accessed on class, return self
-            # You get here if you write `Foo.bar`
-            return self
-        # compute, cache and return the instance's attribute value
-        result = self.method(inst)
-        # setattr redefines the instance's attribute so this doesn't get called
-        # again
-        setattr(inst, self.name, result)
-        return result
-
-
 def merge_dict(*args):
     result = []
     for dict_obj in args:
@@ -110,7 +81,7 @@ def merge_dict(*args):
 
 class BaseCommands(object):
 
-    def _content(self, path, tree):
+    def get_content(self, path, tree):
         """CWD + CDC + maybe(TREE)"""
         response = {}
         response['cwd'] = self.__cwd(path)
@@ -180,6 +151,8 @@ class BaseCommands(object):
         """
         Hash of the path
         """
+        if not path:
+            return None
         m = hashlib.md5()
         m.update(path.encode('utf-8'))
         return str(m.hexdigest())
@@ -204,8 +177,6 @@ class BaseCommands(object):
             else:
                 if ext in MIME_TYPE:
                     mime = MIME_TYPE[ext]
-
-        # self.__debug('mime ' + os.path.basename(path), ext + ' ' + mime)
         return mime
 
     def __path2url(self, path):
@@ -317,9 +288,9 @@ class BaseCommands(object):
 
             info['link'] = self.__hash(lpath)
             info['linkTo'] = basename + lpath[len(self.options['root']):]
-            info['read'] = info['read'] and self.__isAllowed(lpath, 'read')
-            info['write'] = info['write'] and self.__isAllowed(lpath, 'write')
-            info['rm'] = self.__isAllowed(lpath, 'rm')
+            info['read'] = info['read'] and self._isAllowed(lpath, 'read')
+            info['write'] = info['write'] and self._isAllowed(lpath, 'write')
+            info['rm'] = self._isAllowed(lpath, 'rm')
         else:
             lpath = False
 
@@ -377,6 +348,14 @@ class BaseCommands(object):
             return False
         return True
 
+    def check_path(self, path):
+        if not os.path.exists(path) or path == '':
+            raise ElfinderException(
+                'Bad path {}'.format(path)
+            )
+        elif not self._isAllowed(path, 'read'):
+            raise ElfinderException('Access denied to "root" path')
+
 
 class Commands(BaseCommands):
 
@@ -385,6 +364,28 @@ class Commands(BaseCommands):
             return object.__getattribute__(self, name)
         except AttributeError:
             raise ElfinderException('Unknown "{}" command!'.format(name))
+
+    def __findDir(self, fhash, path):
+        """Find directory by hash"""
+        fhash = str(fhash)
+        if not path:
+            path = self._options['root']
+            if fhash == self.__hash(path):
+                return path
+
+        if not os.path.isdir(path):
+            return None
+
+        for d in os.listdir(path):
+            pd = os.path.join(path, d)
+            if os.path.isdir(pd) and not os.path.islink(pd):
+                if fhash == self.__hash(pd):
+                    return pd
+                else:
+                    ret = self.__findDir(fhash, pd)
+                    if ret:
+                        return ret
+        return None
 
     def open(self):
         """
@@ -395,10 +396,9 @@ class Commands(BaseCommands):
         response = {}
         init = self.request['init']
         tree = self.request['tree']
+        path = self.options['root']
         if init:
             response['api'] = '2.0'
-        else:
-            # target = self.request['target']
-            pass
-        path = self.options['root']
-        return merge_dict(response, self._content(path, tree))
+        if getattr(self.options, 'target', False):
+            path = self.__findDir(self.request['target'])
+        return merge_dict(response, self.get_content(path, tree))

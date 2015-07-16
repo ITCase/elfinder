@@ -13,13 +13,36 @@ import os
 import time
 from datetime import datetime
 
-from .common import (
-    OPTIONS,
-    Commands,
-    merge_dict,
-    CachedAttribute,
-    ElfinderException
-)
+from .common import OPTIONS, Commands, merge_dict
+
+
+class CachedAttribute(object):
+    '''
+    Computes attribute value and caches it in the instance.  From the Python
+    Cookbook (Denis Otkidach) This decorator allows you to create a property
+    which can be computed once and accessed many times. Sort of like
+    memoization.
+    '''
+    def __init__(self, method, name=None):
+        # record the unbound-method and the name
+        self.method = method
+        self.name = name or method.__name__
+        self.__doc__ = method.__doc__
+
+    def __get__(self, inst, cls):
+        # self: <__main__.cache object at 0xb781340c>
+        # inst: <__main__.Foo object at 0xb781348c>
+        # cls: <class '__main__.Foo'>
+        if inst is None:
+            # instance attribute accessed on class, return self
+            # You get here if you write `Foo.bar`
+            return self
+        # compute, cache and return the instance's attribute value
+        result = self.method(inst)
+        # setattr redefines the instance's attribute so this doesn't get called
+        # again
+        setattr(inst, self.name, result)
+        return result
 
 
 class Connector(Commands):
@@ -28,9 +51,7 @@ class Connector(Commands):
     """
 
     def __init__(self, options):
-        # for cmd in self._options['disabled']:
-        #     if cmd in self._commands:
-        #         del self._commands[cmd]
+        # TODO: Add disabled commands
         self.options = merge_dict(OPTIONS, options)
 
     @CachedAttribute
@@ -57,14 +78,5 @@ class Connector(Commands):
         t = datetime.fromtimestamp(self._time)
         self._today = time.mktime(datetime(t.year, t.month, t.day).timetuple())
         self._yesterday = self._today - 86400
-
-        if 'root' not in self.options or\
-                not os.path.exists(self.options['root'])\
-                or self.options['root'] == '':
-            raise ElfinderException(
-                'Invalid backend configuration: "root" option has bad value'
-            )
-        elif not self._isAllowed(self.options['root'], 'read'):
-            raise ElfinderException('Access denied to "root" path')
-
+        self.check_path(self.options['root'])
         return self.command()

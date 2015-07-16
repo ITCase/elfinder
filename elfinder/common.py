@@ -157,6 +157,28 @@ class BaseCommands(object):
         m.update(path.encode('utf-8'))
         return str(m.hexdigest())
 
+    def _findDir(self, fhash, path):
+        """Find directory by hash"""
+        fhash = str(fhash)
+        if not path:
+            path = self.options['root']
+            if fhash == self.__hash(path):
+                return path
+
+        if not os.path.isdir(path):
+            return None
+
+        for d in os.listdir(path):
+            pd = os.path.join(path, d)
+            if os.path.isdir(pd) and not os.path.islink(pd):
+                if fhash == self.__hash(pd):
+                    return pd
+                else:
+                    ret = self._findDir(fhash, pd)
+                    if ret:
+                        return ret
+        return None
+
     def __mimetype(self, path):
         """Detect mimetype of file"""
         mime = mimetypes.guess_type(path)[0] or 'unknown'
@@ -365,28 +387,6 @@ class Commands(BaseCommands):
         except AttributeError:
             raise ElfinderException('Unknown "{}" command!'.format(name))
 
-    def __findDir(self, fhash, path):
-        """Find directory by hash"""
-        fhash = str(fhash)
-        if not path:
-            path = self._options['root']
-            if fhash == self.__hash(path):
-                return path
-
-        if not os.path.isdir(path):
-            return None
-
-        for d in os.listdir(path):
-            pd = os.path.join(path, d)
-            if os.path.isdir(pd) and not os.path.islink(pd):
-                if fhash == self.__hash(pd):
-                    return pd
-                else:
-                    ret = self.__findDir(fhash, pd)
-                    if ret:
-                        return ret
-        return None
-
     def open(self):
         """
         Returns information about requested directory and its content,
@@ -394,11 +394,11 @@ class Commands(BaseCommands):
         current volume.
         """
         response = {}
-        init = self.request['init']
-        tree = self.request['tree']
-        path = self.options['root']
+        init = self.request.get('init', None)
+        tree = self.request.get('tree', None)
+        path = self.options.get('root', None)
         if init:
             response['api'] = '2.0'
-        if getattr(self.options, 'target', False):
-            path = self.__findDir(self.request['target'])
+        if 'target' in self.request and self.request['target']:
+            path = self._findDir(self.request['target'], None)
         return merge_dict(response, self.get_content(path, tree))

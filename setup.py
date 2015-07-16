@@ -1,6 +1,6 @@
 import os
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 version = '0.0.4.dev1'
 
@@ -18,9 +18,10 @@ setup(
     author='Svintsov Dmitry',
     author_email='sacrud@uralbash.ru',
 
-    py_modules=['elfinder'],
+    packages=find_packages(),
+    include_package_data=True,
 
-    license="BSD",
+    license="MIT",
     description='elFinder connector for python.',
     long_description=read('README.rst'),
     install_requires=read('requirements.txt'),
@@ -30,7 +31,7 @@ setup(
         'Environment :: Console',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         "Programming Language :: Python :: 2.6",

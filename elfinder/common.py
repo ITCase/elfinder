@@ -154,7 +154,11 @@ class BaseCommands(object):
         if not path:
             return None
         m = hashlib.md5()
-        m.update(path.encode('utf-8'))
+        try:
+            path = path.encode('utf-8')
+        except UnicodeDecodeError:
+            pass
+        m.update(path)
         return str(m.hexdigest())
 
     def _findDir(self, fhash, path):

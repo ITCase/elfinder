@@ -12,6 +12,7 @@ Test for elfinder connector
 
 import os
 import json
+import hashlib
 import unittest
 from pprint import pprint
 
@@ -33,9 +34,9 @@ class TestHash(unittest.TestCase):
             self.hash('foo'), 'acbd18db4cc2f85cedef654fccc4a4d8')
 
     def test_hash_of_bear(self):
-        bear = os.path.join(ROOT, 'bear.jpeg')
-        self.assertEqual(
-            self.hash(bear), 'edefc1e0456cc87c4278bfa52c01851f')
+        bear_path = os.path.join(ROOT, 'bear.jpeg')
+        bear_hash = hashlib.md5(bear_path.encode('utf-8')).hexdigest()
+        self.assertEqual(self.hash(bear_path), bear_hash)
 
     def test_hash_with_bad_path(self):
         self.assertEqual(self.hash(None), None)

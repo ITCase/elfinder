@@ -13,10 +13,12 @@ Test for elfinder connector
 import os
 import json
 import unittest
+from pprint import pprint
 from datetime import datetime
 
 from elfinder import Connector, ElfinderException
 
+PP = pprint
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.join(HERE, 'static/uploads')
 
@@ -60,10 +62,21 @@ class TestCommand(BaseTests):
         date = datetime.fromtimestamp(
             os.stat(ROOT).st_mtime
         ).strftime("%d %b %Y %H:%M")
+        PP(response)
         self.assertEqual(
             response,
             {'api': '2.0',
-             'cdc': [],
+             'cdc': [{'date': 'Today 19:10',
+                      'dim': '420x420',
+                      'hash': 'edefc1e0456cc87c4278bfa52c01851f',
+                      'mime': 'image/jpeg',
+                      'name': 'bear.jpeg',
+                      'read': True,
+                      'resize': True,
+                      'rm': True,
+                      'size': 37675,
+                      'url': '/bear.jpeg',
+                      'write': True}],
              'cwd': {'date': date,
                      'hash': '8320a3d391b236e4cbde269a665c3045',
                      'mime': 'directory',

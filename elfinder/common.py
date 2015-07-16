@@ -1,7 +1,10 @@
 import os
+import urllib
 import hashlib
 import mimetypes
 from datetime import datetime
+
+from PIL import Image
 
 OPTIONS = {
     'root': '',
@@ -107,11 +110,6 @@ def merge_dict(*args):
 
 class BaseCommands(object):
 
-    _im = None
-    _today = 0
-    _yesterday = 0
-    _mimeType = MIME_TYPE
-
     def _content(self, path, tree):
         """CWD + CDC + maybe(TREE)"""
         response = {}
@@ -195,17 +193,17 @@ class BaseCommands(object):
             mime = mimetypes.types_map['.' + ext]
 
         if mime == 'text/plain' and ext == 'pl':
-            mime = self._mimeType[ext]
+            mime = MIME_TYPE[ext]
 
         if mime == 'application/vnd.ms-office' and ext == 'doc':
-            mime = self._mimeType[ext]
+            mime = MIME_TYPE[ext]
 
         if mime == 'unknown':
             if os.path.basename(path) in ['README', 'ChangeLog']:
                 mime = 'text/plain'
             else:
-                if ext in self._mimeType:
-                    mime = self._mimeType[ext]
+                if ext in MIME_TYPE:
+                    mime = MIME_TYPE[ext]
 
         # self.__debug('mime ' + os.path.basename(path), ext + ' ' + mime)
         return mime
@@ -215,46 +213,11 @@ class BaseCommands(object):
         length = len(self.options['root'])
         url = self.options['URL'] + curDir[length:]
         url = url.replace(os.sep, '/')
-
-        try:
-            import urllib
-            url = urllib.quote(url, '/:~')
-        except:
-            pass
-        return url
-
-    def __canCreateTmb(self, path=None):
-        if self.options['imgLib'] and self.options['tmbDir']:
-            if path is not None:
-                mime = self.__mimetype(path)
-                if not mime[0:5] == 'image':
-                    return False
-            return True
-        else:
-            return False
-
-    def __initImgLib(self):
-        if not self.options['imgLib'] is False and self._im is None:
-            try:
-                from PIL import Image
-                self._im = Image
-                self.options['imgLib'] = 'PIL'
-            except:
-                self.options['imgLib'] = False
-                self._im = False
-
-        return self.options['imgLib']
+        return getattr(urllib, 'request', urllib).quote(url, '/:~')
 
     def __getImgSize(self, path):
-        self.__initImgLib()
-        if self.__canCreateTmb():
-            try:
-                im = self._im.open(path)
-                return str(im.size[0]) + 'x' + str(im.size[1])
-            except:
-                pass
-
-        return False
+        im = Image.open(path)
+        return str(im.size[0]) + 'x' + str(im.size[1])
 
     def __dirSize(self, path):
         total_size = 0
@@ -303,7 +266,6 @@ class BaseCommands(object):
         return tree
 
     def __info(self, path):
-        # mime = ''
         filetype = 'file'
         if os.path.isfile(path):
             filetype = 'file'
@@ -368,28 +330,26 @@ class BaseCommands(object):
                 else:
                     info['url'] = self.__path2url(path)
             if info['mime'][0:5] == 'image':
-                if self.__canCreateTmb():
-                    dim = self.__getImgSize(path)
-                    if dim:
-                        info['dim'] = dim
-                        info['resize'] = True
+                dim = self.__getImgSize(path)
+                if dim:
+                    info['dim'] = dim
+                    info['resize'] = True
 
-                    # if we are in tmb dir, files are thumbs itself
-                    if os.path.dirname(path) == self.options['tmbDir']:
-                        info['tmb'] = self.__path2url(path)
-                        return info
+                # if we are in tmb dir, files are thumbs itself
+                if os.path.dirname(path) == self.tmbDir:
+                    info['tmb'] = self.__path2url(path)
+                    return info
 
-                    tmb = os.path.join(
-                        self.options['tmbDir'],
-                        info['hash'] + '.png'
-                    )
+                tmb = os.path.join(
+                    self.tmbDir,
+                    info['hash'] + '.png'
+                )
 
-                    if os.path.exists(tmb):
-                        tmbUrl = self.__path2url(tmb)
-                        info['tmb'] = tmbUrl
-                    else:
-                        # self._response['tmb'] = True
-                        pass
+                if os.path.exists(tmb):
+                    tmbUrl = self.__path2url(tmb)
+                    info['tmb'] = tmbUrl
+                else:
+                    pass
 
         return info
 
@@ -438,6 +398,7 @@ class Commands(BaseCommands):
         if init:
             response['api'] = '2.0'
         else:
-            target = self.request['target']
+            # target = self.request['target']
+            pass
         path = self.options['root']
         return merge_dict(response, self._content(path, tree))

@@ -9,8 +9,9 @@
 """
 Connector for elfinder
 """
-
 import os
+import time
+from datetime import datetime
 
 from .common import (
     OPTIONS,
@@ -52,6 +53,11 @@ class Connector(Commands):
 
     def run(self, request):
         self.request = request
+        self._time = time.time()
+        t = datetime.fromtimestamp(self._time)
+        self._today = time.mktime(datetime(t.year, t.month, t.day).timetuple())
+        self._yesterday = self._today - 86400
+
         if 'root' not in self.options or\
                 not os.path.exists(self.options['root'])\
                 or self.options['root'] == '':

@@ -27,8 +27,8 @@ class BaseTests(unittest.TestCase):
     maxDiff = None
 
     def setUp(self):
-
         self.options = {'root': ROOT}
+        self.connector = Connector(self.options)
 
 
 class TestRootOption(BaseTests):
@@ -56,8 +56,7 @@ class TestCommand(BaseTests):
 
     def test_open_init(self):
         request = json.loads("""{"cmd": "open", "init": 1, "tree": 1}""")
-        connector = Connector(self.options)
-        response = connector.run(request)
+        response = self.connector.run(request)
         self.assertEqual(response['api'], '2.0')
         self.assertEqual(len(response['cdc']), 1)
         self.assertEqual(response['cwd']['mime'], 'directory')
